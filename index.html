@@ -1,1 +1,664 @@
 
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Gouden Fiche</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: marquee header with live balance, game tabs, one shared bet rail, one felt table at a time, result log underneath. Single committed look: green baize, brass, ivory. */
+:root{
+  --felt:#0e3b2c;
+  --felt-deep:#082a1f;
+  --ink:#f1e9d6;
+  --muted:#9fb8aa;
+  --brass:#d8a23a;
+  --ruby:#c8402e;
+  --line:rgba(241,233,214,.18);
+  --good:#7bd88f;
+  --bad:#ff8a78;
+  --display:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;
+  --body:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--felt-deep);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:20px 40px}
+.app{max-width:960px;margin:0 auto;display:grid;gap:16px;min-width:0}
+.label{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+
+.top{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between}
+.brand h1{font:900 clamp(2.2rem,8vw,3.4rem)/.95 var(--display);letter-spacing:.05em;text-transform:uppercase;color:var(--brass);margin:0}
+.brand p{margin:6px 0 0;color:var(--muted)}
+.bank{border:1px solid var(--brass);padding:10px 16px;display:grid;gap:2px;min-width:12rem}
+.bank strong{font:700 2rem/1 var(--mono);font-variant-numeric:tabular-nums}
+.bank .unit{font-size:.8rem;color:var(--muted)}
+
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.tab{flex:0 0 auto;font:700 1.15rem var(--display);letter-spacing:.08em;text-transform:uppercase;padding:10px 18px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.tab[aria-selected="true"]{background:var(--brass);border-color:var(--brass);color:#1b1306}
+
+.betrail{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding-block:12px;border-block:1px solid var(--line)}
+.chips{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.chip{position:relative;width:3.4rem;height:3.4rem;border-radius:50%;border:0;font:700 .95rem var(--mono);cursor:pointer;color:var(--ink);transition:transform .12s}
+.chip::before{content:"";position:absolute;inset:4px;border-radius:50%;border:2px dashed rgba(255,255,255,.55)}
+.chip[data-v="10"]{background:#d9d1bd;color:#1b1b1b}
+.chip[data-v="10"]::before{border-color:rgba(0,0,0,.4)}
+.chip[data-v="25"]{background:var(--ruby)}
+.chip[data-v="50"]{background:#2a7f8f}
+.chip[data-v="100"]{background:#1c1c1c}
+.chip[data-v="250"]{background:var(--brass);color:#1b1306}
+.chip[data-v="250"]::before{border-color:rgba(0,0,0,.4)}
+.chip.allin{background:transparent;border:2px solid var(--brass);color:var(--brass);width:auto;border-radius:999px;padding-inline:16px;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase}
+.chip.allin::before{display:none}
+.chip[aria-pressed="true"]{transform:translateY(-4px);box-shadow:0 0 0 3px var(--brass)}
+.betval{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.betval strong{font-size:1.3rem;color:var(--brass)}
+
+.table{background:radial-gradient(120% 90% at 50% 0%,#15503c 0%,var(--felt) 55%,var(--felt-deep) 100%);border:1px solid var(--line);padding:20px;display:grid;gap:18px;min-width:0}
+.table h2{font:900 1.8rem/1 var(--display);letter-spacing:.06em;text-transform:uppercase;margin:0}
+.table .rules{margin:0;color:var(--muted);max-width:65ch}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.btn{font:700 .95rem var(--body);letter-spacing:.06em;text-transform:uppercase;padding:12px 22px;border:1px solid var(--brass);background:var(--brass);color:#1b1306;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--brass)}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.btn:focus-visible,.tab:focus-visible,.chip:focus-visible,.numgrid button:focus-visible,.pick:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.msg{min-height:1.6em;font-weight:700;font-size:1.05rem}
+.msg.win{color:var(--good)}
+.msg.lose{color:var(--bad)}
+
+.reels{display:flex;gap:10px;justify-content:center}
+.reel{width:clamp(4.6rem,22vw,6.5rem);aspect-ratio:1;max-width:100%;display:grid;place-items:center;font-size:clamp(2.4rem,11vw,3.6rem);background:#06150f;border:2px solid var(--brass)}
+.reel.spin{filter:blur(1.2px)}
+.paytable{display:grid;grid-template-columns:repeat(auto-fit,minmax(8.5rem,1fr));gap:6px;font-size:.88rem;color:var(--muted)}
+.paytable div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line);padding-block:4px;min-width:0}
+.paytable b{font-family:var(--mono);color:var(--ink)}
+
+.seat{display:grid;gap:8px}
+.seat .head{display:flex;gap:10px;align-items:baseline}
+.seat .score{font:700 1.1rem var(--mono);color:var(--brass)}
+.hand{display:flex;gap:8px;flex-wrap:wrap;min-height:5.6rem}
+.card{width:3.8rem;height:5.4rem;background:var(--ink);color:#1a1a1a;display:flex;flex-direction:column;justify-content:space-between;padding:6px 7px;font-family:var(--mono)}
+.card.red{color:var(--ruby)}
+.card b{font-size:1.1rem;line-height:1}
+.card span{font-size:1.8rem;align-self:center;line-height:1}
+.card.back{background:repeating-linear-gradient(45deg,var(--ruby) 0 6px,#8f2b1e 6px 12px);border:3px solid var(--ink)}
+
+.rl-top{display:flex;flex-wrap:wrap;gap:20px;align-items:center}
+.rl-ball{width:7rem;height:7rem;border-radius:50%;display:grid;place-items:center;font:900 3.2rem var(--display);border:4px solid var(--brass);background:var(--felt-deep);flex:0 0 auto}
+.rl-ball.r,.nr{background:var(--ruby)}
+.rl-ball.b,.nb{background:#141414}
+.rl-ball.g,.ng{background:#1f7a46}
+.hist{display:flex;gap:6px;flex-wrap:wrap}
+.hist span{width:2rem;height:2rem;border-radius:50%;display:grid;place-items:center;font:700 .8rem var(--mono)}
+.picks{display:flex;flex-wrap:wrap;gap:8px}
+.pick{font:700 .85rem var(--body);padding:9px 14px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.pick[aria-pressed="true"]{border-color:var(--brass);background:var(--brass);color:#1b1306}
+.numgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(2.6rem,1fr));gap:4px}
+.numgrid button{min-width:0;padding:9px 0;font:700 .9rem var(--mono);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.numgrid button[aria-pressed="true"]{outline:3px solid var(--brass);outline-offset:-3px}
+
+.dice{display:flex;gap:14px;justify-content:center}
+.die{width:4.4rem;height:4.4rem;background:var(--ink);padding:.6rem;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:.12rem}
+.die i{border-radius:50%}
+.die i.on{background:#1a1a1a}
+.die.roll{animation:wob .22s infinite}
+@keyframes wob{0%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}100%{transform:rotate(-6deg)}}
+.coin{width:8rem;height:8rem;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f3d98a,var(--brass) 55%,#8a6215);display:grid;place-items:center;font:900 2rem var(--display);letter-spacing:.06em;color:#2b1d05;border:4px solid #8a6215;margin-inline:auto}
+.coin.flip{animation:flip .9s ease-in-out}
+@keyframes flip{from{transform:rotateY(0)}to{transform:rotateY(1440deg)}}
+@media (prefers-reduced-motion:reduce){.coin.flip,.die.roll{animation:none}}
+
+.refill{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;border:1px solid var(--ruby);padding:12px 16px}
+.refill p{margin:0}
+.log h3{font:700 1.1rem var(--display);letter-spacing:.1em;text-transform:uppercase;margin:0 0 8px}
+.log ul{list-style:none;margin:0;padding:0;display:grid}
+.log li{display:flex;justify-content:space-between;gap:12px;padding-block:7px;border-bottom:1px solid var(--line);min-width:0}
+.log li span:first-child{min-width:0;overflow-wrap:anywhere}
+.log .d{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.log .d.up{color:var(--good)}
+.log .d.down{color:var(--bad)}
+.log .empty{color:var(--muted)}
+.foot{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;color:var(--muted);font-size:.85rem}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Gouden Fiche</h1>
+      <p>Casino met speelgeld. Er gaat nooit echt geld in of uit.</p>
+    </div>
+    <div class="bank" aria-live="polite">
+      <span class="label">Saldo</span>
+      <strong id="balance">1.000</strong>
+      <span class="unit">fiches (speelgeld)</span>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Spellen">
+    <button class="tab" role="tab" data-g="slots" aria-selected="true">Gokkast</button>
+    <button class="tab" role="tab" data-g="bj" aria-selected="false">Blackjack</button>
+    <button class="tab" role="tab" data-g="rl" aria-selected="false">Roulette</button>
+    <button class="tab" role="tab" data-g="dice" aria-selected="false">Dobbelstenen</button>
+    <button class="tab" role="tab" data-g="coin" aria-selected="false">Kop of munt</button>
+  </nav>
+
+  <section class="betrail" aria-label="Inzet kiezen">
+    <span class="label">Inzet</span>
+    <div class="chips" id="chips">
+      <button class="chip" data-v="10" aria-pressed="false">10</button>
+      <button class="chip" data-v="25" aria-pressed="true">25</button>
+      <button class="chip" data-v="50" aria-pressed="false">50</button>
+      <button class="chip" data-v="100" aria-pressed="false">100</button>
+      <button class="chip" data-v="250" aria-pressed="false">250</button>
+      <button class="chip allin" data-v="all" aria-pressed="false">Alles</button>
+    </div>
+    <div class="betval">Inzet <strong id="betval">25</strong></div>
+  </section>
+
+  <div class="refill" id="refill" hidden>
+    <p>Je fiches zijn op. Pak gratis speelgeld en ga verder.</p>
+    <button class="btn" id="refill-btn">+500 fiches</button>
+  </div>
+
+  <main>
+    <!-- Gokkast -->
+    <section class="table" id="t-slots">
+      <h2>Gokkast</h2>
+      <p class="rules">Drie dezelfde symbolen betalen de vermenigvuldiger hieronder. Twee kersen betalen 3 keer je inzet.</p>
+      <div class="reels" id="reels">
+        <div class="reel">🍒</div><div class="reel">🍋</div><div class="reel">🔔</div>
+      </div>
+      <div class="msg" id="slots-msg" aria-live="polite">Kies je inzet en trek aan de hendel.</div>
+      <div class="actions"><button class="btn" id="slots-spin">Draaien</button></div>
+      <div class="paytable">
+        <div><span>🍒🍒🍒</span><b>×5</b></div>
+        <div><span>🍋🍋🍋</span><b>×8</b></div>
+        <div><span>🔔🔔🔔</span><b>×12</b></div>
+        <div><span>⭐⭐⭐</span><b>×20</b></div>
+        <div><span>7️⃣7️⃣7️⃣</span><b>×50</b></div>
+        <div><span>💎💎💎</span><b>×100</b></div>
+        <div><span>2× 🍒</span><b>×3</b></div>
+      </div>
+    </section>
+
+    <!-- Blackjack -->
+    <section class="table" id="t-bj" hidden>
+      <h2>Blackjack</h2>
+      <p class="rules">Kom dichter bij 21 dan de deler zonder erover te gaan. De deler stopt bij 17. Blackjack betaalt 3 op 2, winst betaalt 1 op 1.</p>
+      <div class="seat">
+        <div class="head"><span class="label">Deler</span><span class="score" id="bj-dscore"></span></div>
+        <div class="hand" id="bj-dealer"></div>
+      </div>
+      <div class="seat">
+        <div class="head"><span class="label">Jij</span><span class="score" id="bj-pscore"></span></div>
+        <div class="hand" id="bj-player"></div>
+      </div>
+      <div class="msg" id="bj-msg" aria-live="polite">Deel de kaarten om te beginnen.</div>
+      <div class="actions">
+        <button class="btn" id="bj-deal">Delen</button>
+        <button class="btn ghost" id="bj-hit">Kaart</button>
+        <button class="btn ghost" id="bj-stand">Blijven</button>
+        <button class="btn ghost" id="bj-double">Verdubbelen</button>
+      </div>
+    </section>
+
+    <!-- Roulette -->
+    <section class="table" id="t-rl" hidden>
+      <h2>Roulette</h2>
+      <p class="rules">Europese roulette met één nul. Kleur, even of oneven en 1–18 of 19–36 betalen 1 op 1. Dozijnen betalen 2 op 1. Een enkel nummer betaalt 35 op 1.</p>
+      <div class="rl-top">
+        <div class="rl-ball g" id="rl-ball">0</div>
+        <div>
+          <span class="label">Laatste nummers</span>
+          <div class="hist" id="rl-hist"></div>
+        </div>
+      </div>
+      <div class="picks" id="rl-picks"></div>
+      <div class="numgrid" id="rl-nums"></div>
+      <div class="label" id="rl-sel">Nog niets gekozen</div>
+      <div class="msg" id="rl-msg" aria-live="polite">Kies waarop je inzet en draai het wiel.</div>
+      <div class="actions"><button class="btn" id="rl-spin">Wiel draaien</button></div>
+    </section>
+
+    <!-- Dobbelstenen -->
+    <section class="table" id="t-dice" hidden>
+      <h2>Dobbelstenen</h2>
+      <p class="rules">Twee dobbelstenen. Gok op lager dan 7 of hoger dan 7 en krijg 2 keer je inzet. Raad je precies 7, dan krijg je 5 keer je inzet.</p>
+      <div class="dice" id="dice"></div>
+      <div class="msg" id="dice-msg" aria-live="polite">Kies je gok en gooi.</div>
+      <div class="actions">
+        <button class="btn" data-dice="low">Lager dan 7</button>
+        <button class="btn" data-dice="seven">Precies 7</button>
+        <button class="btn" data-dice="high">Hoger dan 7</button>
+      </div>
+    </section>
+
+    <!-- Kop of munt -->
+    <section class="table" id="t-coin" hidden>
+      <h2>Kop of munt</h2>
+      <p class="rules">Raad de kant van de munt. Goed geraden betaalt 1,95 keer je inzet.</p>
+      <div class="coin" id="coin">?</div>
+      <div class="msg" id="coin-msg" aria-live="polite">Kies kop of munt.</div>
+      <div class="actions">
+        <button class="btn" data-coin="KOP">Kop</button>
+        <button class="btn" data-coin="MUNT">Munt</button>
+      </div>
+    </section>
+  </main>
+
+  <section class="log" aria-label="Laatste resultaten">
+    <h3>Laatste resultaten</h3>
+    <ul id="log"><li class="empty">Nog geen rondes gespeeld.</li></ul>
+  </section>
+
+  <footer class="foot">
+    <span>Alle fiches zijn speelgeld. Er valt geen echt geld of echte prijs te winnen.</span>
+    <button class="btn ghost" id="reset">Opnieuw beginnen met 1.000</button>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var $ = function(s){ return document.querySelector(s); };
+  var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+  var fmt = function(n){ return n.toLocaleString('nl-BE'); };
+  var START = 1000;
+
+  var balance = START, bet = 25, log = [];
+  try {
+    var saved = parseInt(localStorage.getItem('gf-balance'), 10);
+    if (saved >= 0) balance = saved;
+  } catch (e) {}
+
+  function save(){ try { localStorage.setItem('gf-balance', String(balance)); } catch (e) {} }
+
+  function say(id, text, kind){
+    var el = $(id);
+    el.textContent = text;
+    el.className = 'msg' + (kind ? ' ' + kind : '');
+  }
+
+  function updateUI(){
+    if (balance > 0 && bet > balance) bet = balance;
+    if (bet < 1 && balance > 0) bet = 1;
+    $('#balance').textContent = fmt(balance);
+    $('#betval').textContent = fmt(bet);
+    $$('#chips .chip').forEach(function(c){
+      var v = c.getAttribute('data-v');
+      var on = v === 'all' ? (bet === balance && balance > 0 && [10,25,50,100,250].indexOf(bet) === -1) : parseInt(v, 10) === bet;
+      c.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    var busyHand = bj.state === 'playing' || bj.state === 'dealer';
+    $('#refill').hidden = !(balance < 10 && !busyHand && !anyBusy());
+    save();
+  }
+
+  function anyBusy(){ return slots.busy || rl.busy || dice.busy || coin.busy; }
+
+  function canBet(msgId){
+    if (bet < 1 || bet > balance){
+      say(msgId, 'Je hebt te weinig fiches voor deze inzet.', 'lose');
+      return false;
+    }
+    return true;
+  }
+
+  function take(n){ balance -= n; updateUI(); }
+
+  function settle(game, stake, returned, text){
+    balance += returned;
+    log.unshift({ game: game, text: text, delta: returned - stake });
+    if (log.length > 8) log.pop();
+    updateUI();
+    renderLog();
+  }
+
+  function renderLog(){
+    var ul = $('#log');
+    if (!log.length){ ul.innerHTML = '<li class="empty">Nog geen rondes gespeeld.</li>'; return; }
+    ul.innerHTML = log.map(function(l){
+      var cls = l.delta > 0 ? 'up' : (l.delta < 0 ? 'down' : '');
+      var sign = l.delta > 0 ? '+' : (l.delta < 0 ? '−' : '±');
+      return '<li><span>' + l.game + ' · ' + l.text + '</span><span class="d ' + cls + '">' + sign + fmt(Math.abs(l.delta)) + '</span></li>';
+    }).join('');
+  }
+
+  function result(msgId, stake, returned, winText, loseText){
+    var net = returned - stake;
+    if (net > 0) say(msgId, winText + ' Je wint ' + fmt(net) + ' fiches.', 'win');
+    else if (net === 0) say(msgId, 'Gelijkspel. Je krijgt je inzet terug.', '');
+    else say(msgId, loseText + ' Je verliest ' + fmt(stake) + ' fiches.', 'lose');
+  }
+
+  /* ---------- Tabs en inzet ---------- */
+  $$('#tabs .tab').forEach(function(t){
+    t.addEventListener('click', function(){
+      var g = t.getAttribute('data-g');
+      $$('#tabs .tab').forEach(function(x){ x.setAttribute('aria-selected', x === t ? 'true' : 'false'); });
+      ['slots','bj','rl','dice','coin'].forEach(function(k){ $('#t-' + k).hidden = (k !== g); });
+    });
+  });
+
+  $$('#chips .chip').forEach(function(c){
+    c.addEventListener('click', function(){
+      var v = c.getAttribute('data-v');
+      bet = v === 'all' ? balance : parseInt(v, 10);
+      if (bet > balance) bet = balance;
+      updateUI();
+    });
+  });
+
+  $('#refill-btn').addEventListener('click', function(){ balance += 500; updateUI(); });
+  $('#reset').addEventListener('click', function(){
+    if (anyBusy() || bj.state === 'playing' || bj.state === 'dealer') return;
+    balance = START; bet = 25; log = [];
+    bj.state = 'idle'; bj.player = []; bj.dealer = [];
+    renderBJ(); renderLog(); updateUI();
+    say('#slots-msg', 'Opnieuw begonnen met 1.000 fiches.', '');
+  });
+
+  /* ---------- Gokkast ---------- */
+  var slots = { busy: false };
+  var SYM = [
+    { s: '🍒', w: 30, m: 5 }, { s: '🍋', w: 25, m: 8 }, { s: '🔔', w: 20, m: 12 },
+    { s: '⭐', w: 12, m: 20 }, { s: '7️⃣', w: 8, m: 50 }, { s: '💎', w: 5, m: 100 }
+  ];
+  function pickSym(){
+    var r = Math.random() * 100;
+    for (var i = 0; i < SYM.length; i++){ r -= SYM[i].w; if (r < 0) return SYM[i]; }
+    return SYM[0];
+  }
+  function spinSlots(){
+    if (slots.busy) return;
+    if (!canBet('#slots-msg')) return;
+    slots.busy = true;
+    $('#slots-spin').disabled = true;
+    var stake = bet;
+    take(stake);
+    say('#slots-msg', 'De rollen draaien…', '');
+    var reels = $$('#reels .reel');
+    var res = [pickSym(), pickSym(), pickSym()];
+    var timers = reels.map(function(r){
+      r.classList.add('spin');
+      return setInterval(function(){ r.textContent = SYM[Math.floor(Math.random() * SYM.length)].s; }, 70);
+    });
+    reels.forEach(function(r, i){
+      setTimeout(function(){
+        clearInterval(timers[i]);
+        r.textContent = res[i].s;
+        r.classList.remove('spin');
+        if (i === 2){
+          var mult = 0;
+          if (res[0] === res[1] && res[1] === res[2]) mult = res[0].m;
+          else if (res.filter(function(x){ return x.s === '🍒'; }).length === 2) mult = 3;
+          var returned = stake * mult;
+          slots.busy = false;
+          $('#slots-spin').disabled = false;
+          settle('Gokkast', stake, returned, res.map(function(x){ return x.s; }).join(' '));
+          result('#slots-msg', stake, returned, mult >= 20 ? 'Jackpot!' : 'Prijs!', 'Geen prijs.');
+        }
+      }, 900 + i * 450);
+    });
+  }
+  $('#slots-spin').addEventListener('click', spinSlots);
+
+  /* ---------- Blackjack ---------- */
+  var bj = { deck: [], player: [], dealer: [], bet: 0, state: 'idle' };
+  function newDeck(){
+    var suits = ['♠','♥','♦','♣'], ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'], d = [];
+    suits.forEach(function(s){ ranks.forEach(function(r){ d.push({ r: r, s: s }); }); });
+    for (var i = d.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1)), t = d[i]; d[i] = d[j]; d[j] = t;
+    }
+    return d;
+  }
+  function val(hand){
+    var t = 0, a = 0;
+    hand.forEach(function(c){
+      if (c.r === 'A'){ a++; t += 11; }
+      else if (c.r === 'J' || c.r === 'Q' || c.r === 'K' || c.r === '10') t += 10;
+      else t += parseInt(c.r, 10);
+    });
+    while (t > 21 && a > 0){ t -= 10; a--; }
+    return t;
+  }
+  function cardHTML(c, hidden){
+    if (hidden) return '<div class="card back" aria-label="Verborgen kaart"></div>';
+    var red = (c.s === '♥' || c.s === '♦') ? ' red' : '';
+    return '<div class="card' + red + '"><b>' + c.r + '</b><span>' + c.s + '</span></div>';
+  }
+  function renderBJ(){
+    var hide = bj.state === 'playing';
+    $('#bj-dealer').innerHTML = bj.dealer.map(function(c, i){ return cardHTML(c, hide && i === 1); }).join('');
+    $('#bj-player').innerHTML = bj.player.map(function(c){ return cardHTML(c, false); }).join('');
+    $('#bj-dscore').textContent = bj.dealer.length ? (hide ? val([bj.dealer[0]]) : val(bj.dealer)) : '';
+    $('#bj-pscore').textContent = bj.player.length ? val(bj.player) : '';
+    var playing = bj.state === 'playing';
+    $('#bj-deal').disabled = (bj.state === 'playing' || bj.state === 'dealer');
+    $('#bj-hit').disabled = !playing;
+    $('#bj-stand').disabled = !playing;
+    $('#bj-double').disabled = !(playing && bj.player.length === 2 && balance >= bj.bet);
+  }
+  function endBJ(returned, winText, loseText){
+    bj.state = 'done';
+    renderBJ();
+    settle('Blackjack', bj.bet, returned, val(bj.player) + ' tegen ' + val(bj.dealer));
+    result('#bj-msg', bj.bet, returned, winText, loseText);
+  }
+  function dealBJ(){
+    if (bj.state === 'playing' || bj.state === 'dealer') return;
+    if (!canBet('#bj-msg')) return;
+    bj.bet = bet;
+    take(bj.bet);
+    bj.deck = newDeck();
+    bj.player = [bj.deck.pop(), bj.deck.pop()];
+    bj.dealer = [bj.deck.pop(), bj.deck.pop()];
+    bj.state = 'playing';
+    say('#bj-msg', 'Jouw beurt. Neem een kaart, blijf staan of verdubbel.', '');
+    renderBJ();
+    var pbj = val(bj.player) === 21, dbj = val(bj.dealer) === 21;
+    if (pbj || dbj){
+      bj.state = 'done';
+      if (pbj && dbj) endBJ(bj.bet, '', '');
+      else if (pbj) endBJ(Math.floor(bj.bet * 2.5), 'Blackjack!', '');
+      else endBJ(0, '', 'De deler heeft blackjack.');
+    }
+  }
+  function hitBJ(){
+    if (bj.state !== 'playing') return;
+    bj.player.push(bj.deck.pop());
+    renderBJ();
+    var v = val(bj.player);
+    if (v > 21){ bj.state = 'done'; endBJ(0, '', 'Over de 21.'); }
+    else if (v === 21) standBJ();
+  }
+  function standBJ(){
+    if (bj.state !== 'playing') return;
+    bj.state = 'dealer';
+    renderBJ();
+    say('#bj-msg', 'De deler is aan de beurt…', '');
+    (function step(){
+      if (val(bj.dealer) < 17){
+        bj.dealer.push(bj.deck.pop());
+        renderBJ();
+        setTimeout(step, 600);
+      } else {
+        var pv = val(bj.player), dv = val(bj.dealer);
+        if (dv > 21) endBJ(bj.bet * 2, 'De deler gaat over de 21.', '');
+        else if (pv > dv) endBJ(bj.bet * 2, 'Jij wint.', '');
+        else if (pv === dv) endBJ(bj.bet, '', '');
+        else endBJ(0, '', 'De deler wint.');
+      }
+    })();
+  }
+  function doubleBJ(){
+    if (bj.state !== 'playing' || bj.player.length !== 2 || balance < bj.bet) return;
+    take(bj.bet);
+    bj.bet *= 2;
+    bj.player.push(bj.deck.pop());
+    renderBJ();
+    if (val(bj.player) > 21){ bj.state = 'done'; endBJ(0, '', 'Over de 21.'); }
+    else standBJ();
+  }
+  $('#bj-deal').addEventListener('click', dealBJ);
+  $('#bj-hit').addEventListener('click', hitBJ);
+  $('#bj-stand').addEventListener('click', standBJ);
+  $('#bj-double').addEventListener('click', doubleBJ);
+
+  /* ---------- Roulette ---------- */
+  var rl = { busy: false, sel: null, key: null };
+  var RED = {};
+  [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36].forEach(function(n){ RED[n] = true; });
+  var colorOf = function(n){ return n === 0 ? 'g' : (RED[n] ? 'r' : 'b'); };
+  var RL_BETS = [
+    { id: 'red', label: 'Rood', m: 2, t: function(n){ return n > 0 && !!RED[n]; } },
+    { id: 'black', label: 'Zwart', m: 2, t: function(n){ return n > 0 && !RED[n]; } },
+    { id: 'even', label: 'Even', m: 2, t: function(n){ return n > 0 && n % 2 === 0; } },
+    { id: 'odd', label: 'Oneven', m: 2, t: function(n){ return n % 2 === 1; } },
+    { id: 'low', label: '1–18', m: 2, t: function(n){ return n >= 1 && n <= 18; } },
+    { id: 'high', label: '19–36', m: 2, t: function(n){ return n >= 19; } },
+    { id: 'd1', label: '1e dozijn (1–12)', m: 3, t: function(n){ return n >= 1 && n <= 12; } },
+    { id: 'd2', label: '2e dozijn (13–24)', m: 3, t: function(n){ return n >= 13 && n <= 24; } },
+    { id: 'd3', label: '3e dozijn (25–36)', m: 3, t: function(n){ return n >= 25; } }
+  ];
+  function markRL(){
+    $$('#rl-picks .pick').forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-k') === rl.key ? 'true' : 'false'); });
+    $$('#rl-nums button').forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-k') === rl.key ? 'true' : 'false'); });
+    $('#rl-sel').textContent = rl.sel ? 'Gekozen: ' + rl.sel.label + ' (betaalt ' + (rl.sel.m - 1) + ' op 1)' : 'Nog niets gekozen';
+  }
+  RL_BETS.forEach(function(b){
+    var el = document.createElement('button');
+    el.className = 'pick'; el.textContent = b.label; el.setAttribute('data-k', b.id); el.setAttribute('aria-pressed', 'false');
+    el.addEventListener('click', function(){ if (rl.busy) return; rl.sel = b; rl.key = b.id; markRL(); });
+    $('#rl-picks').appendChild(el);
+  });
+  for (var n = 0; n <= 36; n++){
+    (function(n){
+      var el = document.createElement('button');
+      el.className = 'n' + colorOf(n); el.textContent = n; el.setAttribute('data-k', 'n' + n); el.setAttribute('aria-pressed', 'false');
+      el.setAttribute('aria-label', 'Nummer ' + n);
+      el.addEventListener('click', function(){
+        if (rl.busy) return;
+        rl.sel = { label: 'Nummer ' + n, m: 36, t: function(x){ return x === n; } };
+        rl.key = 'n' + n; markRL();
+      });
+      $('#rl-nums').appendChild(el);
+    })(n);
+  }
+  var rlHist = [];
+  function showBall(v){
+    var b = $('#rl-ball');
+    b.textContent = v;
+    b.className = 'rl-ball ' + colorOf(v);
+  }
+  function renderHist(){
+    $('#rl-hist').innerHTML = rlHist.map(function(v){ return '<span class="n' + colorOf(v) + '">' + v + '</span>'; }).join('');
+  }
+  function spinRL(){
+    if (rl.busy) return;
+    if (!rl.sel){ say('#rl-msg', 'Kies eerst waarop je inzet.', 'lose'); return; }
+    if (!canBet('#rl-msg')) return;
+    rl.busy = true;
+    $('#rl-spin').disabled = true;
+    var stake = bet, sel = rl.sel;
+    take(stake);
+    say('#rl-msg', 'Het balletje rolt…', '');
+    var out = Math.floor(Math.random() * 37), steps = 0, total = 22;
+    (function tick(){
+      if (steps < total){
+        showBall(Math.floor(Math.random() * 37));
+        steps++;
+        setTimeout(tick, 55 + steps * steps * 0.35);
+      } else {
+        showBall(out);
+        rlHist.unshift(out); if (rlHist.length > 10) rlHist.pop();
+        renderHist();
+        var won = sel.t(out);
+        var returned = won ? stake * sel.m : 0;
+        rl.busy = false;
+        $('#rl-spin').disabled = false;
+        settle('Roulette', stake, returned, sel.label + ', uitslag ' + out);
+        result('#rl-msg', stake, returned, 'Het balletje valt op ' + out + '.', 'Het balletje valt op ' + out + '.');
+      }
+    })();
+  }
+  $('#rl-spin').addEventListener('click', spinRL);
+  showBall(0);
+
+  /* ---------- Dobbelstenen ---------- */
+  var dice = { busy: false };
+  var PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  function dieHTML(n, rolling){
+    var h = '<div class="die' + (rolling ? ' roll' : '') + '" aria-label="Dobbelsteen ' + n + '">';
+    for (var i = 0; i < 9; i++) h += '<i class="' + (PIPS[n].indexOf(i) > -1 ? 'on' : '') + '"></i>';
+    return h + '</div>';
+  }
+  function showDice(a, b, rolling){ $('#dice').innerHTML = dieHTML(a, rolling) + dieHTML(b, rolling); }
+  showDice(3, 4, false);
+  var d6 = function(){ return 1 + Math.floor(Math.random() * 6); };
+  $$('[data-dice]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (dice.busy) return;
+      if (!canBet('#dice-msg')) return;
+      dice.busy = true;
+      $$('[data-dice]').forEach(function(x){ x.disabled = true; });
+      var stake = bet, pick = btn.getAttribute('data-dice');
+      take(stake);
+      say('#dice-msg', 'De dobbelstenen rollen…', '');
+      var a = d6(), b = d6(), count = 0;
+      var iv = setInterval(function(){
+        showDice(d6(), d6(), true);
+        if (++count >= 9){
+          clearInterval(iv);
+          showDice(a, b, false);
+          var sum = a + b, mult = 0;
+          if (pick === 'low' && sum < 7) mult = 2;
+          else if (pick === 'high' && sum > 7) mult = 2;
+          else if (pick === 'seven' && sum === 7) mult = 5;
+          var returned = stake * mult;
+          dice.busy = false;
+          $$('[data-dice]').forEach(function(x){ x.disabled = false; });
+          settle('Dobbelstenen', stake, returned, a + ' + ' + b + ' = ' + sum);
+          result('#dice-msg', stake, returned, 'Je gooit ' + sum + '.', 'Je gooit ' + sum + '.');
+        }
+      }, 90);
+    });
+  });
+
+  /* ---------- Kop of munt ---------- */
+  var coin = { busy: false };
+  $$('[data-coin]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if (coin.busy) return;
+      if (!canBet('#coin-msg')) return;
+      coin.busy = true;
+      $$('[data-coin]').forEach(function(x){ x.disabled = true; });
+      var stake = bet, pick = btn.getAttribute('data-coin');
+      take(stake);
+      say('#coin-msg', 'De munt draait…', '');
+      var el = $('#coin');
+      el.textContent = '?';
+      el.classList.remove('flip');
+      void el.offsetWidth;
+      el.classList.add('flip');
+      var out = Math.random() < 0.5 ? 'KOP' : 'MUNT';
+      setTimeout(function(){
+        el.classList.remove('flip');
+        el.textContent = out;
+        var returned = out === pick ? Math.floor(stake * 1.95) : 0;
+        coin.busy = false;
+        $$('[data-coin]').forEach(function(x){ x.disabled = false; });
+        settle('Kop of munt', stake, returned, 'gekozen ' + pick.toLowerCase() + ', uitkomst ' + out.toLowerCase());
+        result('#coin-msg', stake, returned, 'Het is ' + out.toLowerCase() + '.', 'Het is ' + out.toLowerCase() + '.');
+      }, 950);
+    });
+  });
+
+  renderBJ();
+  renderLog();
+  updateUI();
+})();
+</script>
+
+</body></html>
